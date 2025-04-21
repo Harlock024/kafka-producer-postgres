@@ -39,14 +39,15 @@ def on_error(e):
 
 DATA_JSON_URL = "https://raw.githubusercontent.com/Harlock024/stream_kafka_p/refs/heads/master/results/data.json"
 
-@app.route('/trigger-producer', methods=['POST'])
+@app.route('/trigger-producer', methods=['GET'])
 def trigger_producer():
     try:
+        print("Cargando datos desde:", DATA_JSON_URL)
         df = pd.read_json(DATA_JSON_URL, orient="columns")
+        print("Datos cargados exitosamente.")
 
         for index, row in df.head(100).iterrows():
-            data_dict = row.to_dict()
-
+            data_dict = json.loads(json.dumps(row.to_dict(), default=str))
 
             future = producer.send(
                 "spotify",
@@ -56,9 +57,7 @@ def trigger_producer():
             future.add_callback(on_success)
             future.add_errback(on_error)
 
-
         producer.flush()
-        producer.close()
 
         return jsonify({"message": "Datos enviados a Redpanda correctamente"}), 200
 
@@ -67,5 +66,6 @@ def trigger_producer():
         return jsonify({"error": f"Error al procesar el dataset: {str(e)}"}), 500
 
 
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
